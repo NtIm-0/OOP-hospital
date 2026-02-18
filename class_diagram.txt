@@ -9,41 +9,34 @@ direction TB
         UNPAID
         PAID
     }
-
-    class ServiceID {
-        EXAMINATION
-        CAGE
-        MEDCINE
-    }
+    <<Enumeration>> PaymentStatus
 
     class Species {
 	    CAT
 	    DOG
 	    EXOTIC
     }
+    <<Enumeration>> Species
 
     class Sex {
         MALE
         FEMALE
     }
+    <<Enumeration>> Sex
 
     class WardType {
         STANDARD
         ICU
         ISOLATION
     }
-
-    class CageSize {
-        S
-        M
-        L
-        XL
-    }
+    <<Enumeration>> WardType
 
     class CageStatus {
         AVAILABLE
         OCCUPIED
+        RESERVED
     }
+    <<Enumeration>> CageStatus
 
     class AppointmentStatus {
         SCHEDULED
@@ -52,11 +45,13 @@ direction TB
         CANCELLED
         NO_SHOW
     }
+    <<Enumeration>> AppointmentStatus
 
     class RoomStatus {
         AVAILABLE
         IN_PROGRESS
     }
+    <<Enumeration>> RoomStatus
 
     class User {
         -name : str
@@ -67,12 +62,19 @@ direction TB
         -current_appointment : Appointment
 	    +add_pet(PetProfile)
     }
+    User --> Appointment : makes
+    User <-- Appointment
+    User <|-- Employee
+    User "1" o-- "1..*" PetProfile
 
     class Employee {
         -employee_id : str
 	    -hospital : str
 	    -salary : float
     }
+    Employee <|-- Vet
+    Employee <|-- HospitalStaff
+    Employee <|-- HospitalManager
 
     class Vet {
 	    -expertise: Species
@@ -80,6 +82,9 @@ direction TB
         -current_appointment : Appointment
         +is_available_at(desired_time)
     }
+    Vet o-- TimeSlot
+    Vet --> MedicalRecord : makes
+    Vet <-- Appointment
 
     class TimeSlot {
         timeslot : datetime
@@ -109,12 +114,30 @@ direction TB
         -bithdate : str
         -medical_records : List
     }
+    PetProfile "1" o-- "0..*" MedicalRecord
 
     class Cage {
         -cage_no : str
         -cage_status : CageStatus
-        -cage_size : CageSize
         -pet_id : str
+    }
+    <<Abstract>> Cage
+    Cage <|-- S_Cage
+    Cage <|-- M_Cage
+    Cage <|-- L_Cage
+    Cage<--PetProfile
+
+    class S_Cage {
+        -size: int
+        -price_per_day: float
+    }
+    class M_Cage {
+        -size: int
+        -price_per_day: float
+    }
+    class L_Cage {
+        -size: int
+        -price_per_day: float
     }
 
     class MedicalRecord {
@@ -125,13 +148,17 @@ direction TB
 	    -symptoms : str
         -diagnosis : str
         -prescription : Prescription
-        -admitted_record : AdmittedRecord
+        -admitted_record : AdmitRecord
     }
+    MedicalRecord <-- Prescription
+    MedicalRecord <-- AdmitRecord
+    MedicalRecord <-- PetProfile
 
     class Prescription {
         -medicine : Medicine
         -instructions : str
     }
+    Prescription <-- Medicine
 
     class Appointment {
         -appointment_id : str
@@ -143,6 +170,7 @@ direction TB
         -invoice : Invoice
         -Payment : Payment
     }
+    Appointment --> Invoice : generates
 
     class Invoice {
         -invoice_no : str
@@ -162,13 +190,32 @@ direction TB
         -method : PaymentMethod
         -receipt_list : List[ServiceItem]
     }
+    Payment <-- Appointment : settles
 
-    class ServiceItem {
-        -service_id: ServiceType
-        -detail : str
-        -quantity : int
-        -unit_price : float
+    class ServiceItem { 
     }
+    <<Abstract>> ServiceItem
+    ServiceItem --o Payment
+    ServiceItem <|-- CageService
+    ServiceItem <|-- MedicalService
+
+    class CageService {
+        -ward: Ward
+        -cage: Cage
+        -duration_of_stay: int
+        +__str__()
+    }
+    CageService <-- Cage
+    CageService <-- Ward
+
+    class MedicalService {
+        -examination_fee: int
+        -medicine: Medicine
+        -quantity: int
+        -unit_price: float
+        +__str__()
+    }
+    MedicalService <-- Medicine
 
     class PetHospital {
 	    -name : str
@@ -187,10 +234,16 @@ direction TB
         +search_user_by_id(user_id)
         +look_up_appointments(user_id)
         +look_up_cage_booking(user_id)
-        +request_appointment(user_id, vet_id, PetProfile, desired_date)
+        +request_appointment(user_id, vet_id, pet_id, chosen_date)
         +create_new_appointment()
-        +book_cage(user_id, PetProfile, CageSize, stay_date, duration)
+        +book_cage(user_id, pet_id, CageSize, stay_date, duration)
     }
+    PetHospital "1" o-- "0..*" MedicalRecord
+    PetHospital "1" o-- "1..*" Employee
+    PetHospital "1" o-- "1..*" Ward
+    PetHospital "1" o-- "0..*" AdmitRecord
+    PetHospital "1" o-- "1..*" ExaminationRoom
+    PetHospital "1" o-- "0..*" Appointment
 
     class CageBooking {
         -booking_id : str
@@ -199,15 +252,18 @@ direction TB
         -stay_date : datetime
         -leave_date : datetime
         -user : User
-        -pet_profile : PetProfile
+        -cage: Cage
         -invoice : Invoice
         -Payment : Payment
     }
+    CageBooking --o PetHospital
+    CageBooking <-- Cage
 
     class Medicine {
+        -quantity : int
+        -unit_price : float
         -medicine_id : string
         -name : str
-        -use_to_treat : List
     }
 
     class ExaminationRoom {
@@ -221,49 +277,14 @@ direction TB
         -cage_list : List
         -max_number_of_cage : 10
     }
+    Ward "1" o-- "1..10" Cage
 
-    class AdmittedRecord {
-        -pet_id : str
-        -ward_no : str
-        -cage_no : str
+    class AdmitRecord {
+        -pet : PetProfile
+        -ward : Ward
+        -cage : Cage
         -date_of_admit : datetime
         -date_of_leave : datetime
-        -total_admitted_time : int
+        -total_admitted_time_in_days : int
     }
-
-	<<Enumeration>> Species
-    <<Enumeration>> Sex
-    <<Enumeration>> WardType
-    <<Enumeration>> CageSize
-    <<Enumeration>> CageStatus
-    <<Enumeration>> RoomStatus
-
-    ServiceItem --o Payment
-    Payment <-- Appointment : settles
-    Prescription <-- Medicine
-    CageBooking --o PetHospital
-
-    Cage<--PetProfile
-    Vet o-- TimeSlot
-    Vet --> MedicalRecord : makes
-    Vet <-- Appointment
-    User --> Appointment : makes
-    User <-- Appointment
-    User <|-- Employee
-    Ward "1" o-- "1..10" Cage
-    User "1" o-- "1..*" PetProfile
-    Employee <|-- Vet
-    Employee <|-- HospitalStaff
-    Employee <|-- HospitalManager
-    MedicalRecord <-- Prescription
-    MedicalRecord <-- AdmittedRecord
-    MedicalRecord <-- PetProfile
-    PetProfile "1" o-- "0..*" MedicalRecord
-    PetHospital "1" o-- "0..*" MedicalRecord
-    PetHospital "1" o-- "1..*" Employee
-    PetHospital "1" o-- "1..*" Ward
-    PetHospital "1" o-- "0..*" AdmittedRecord
-    PetHospital "1" o-- "1..*" ExaminationRoom
-    PetHospital "1" o-- "0..*" Appointment
-    Appointment --> Invoice : generates
-    AdmittedRecord --> PetProfile
+    AdmitRecord --> PetProfile
