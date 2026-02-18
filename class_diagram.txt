@@ -1,0 +1,269 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+
+    class PaymentStatus {
+        UNPAID
+        PAID
+    }
+
+    class ServiceID {
+        EXAMINATION
+        CAGE
+        MEDCINE
+    }
+
+    class Species {
+	    CAT
+	    DOG
+	    EXOTIC
+    }
+
+    class Sex {
+        MALE
+        FEMALE
+    }
+
+    class WardType {
+        STANDARD
+        ICU
+        ISOLATION
+    }
+
+    class CageSize {
+        S
+        M
+        L
+        XL
+    }
+
+    class CageStatus {
+        AVAILABLE
+        OCCUPIED
+    }
+
+    class AppointmentStatus {
+        SCHEDULED
+        CHECKED_IN
+        COMPLETED
+        CANCELLED
+        NO_SHOW
+    }
+
+    class RoomStatus {
+        AVAILABLE
+        IN_PROGRESS
+    }
+
+    class User {
+        -name : str
+        -user_id : str
+        -phone_no : str
+        -no_show_left : int
+        -pet_list : List
+        -current_appointment : Appointment
+	    +add_pet(PetProfile)
+    }
+
+    class Employee {
+        -employee_id : str
+	    -hospital : str
+	    -salary : float
+    }
+
+    class Vet {
+	    -expertise: Species
+        -timeslot_list : List[TimeSlot]
+        -current_appointment : Appointment
+        +is_available_at(desired_time)
+    }
+
+    class TimeSlot {
+        timeslot : datetime
+        available : bool
+    }
+
+    class HospitalStaff {
+        +assign_pet(pet_id, ward_no, cage_no)
+        +clean_cage(ward_no, cage_no)
+        +assign_vet(room_no)
+        +clean_room(room_no)
+    }
+
+    class HospitalManager {
+        +change_price_rates(..)
+        +add_cage(ward_no)
+        +remove_cage(ward_no)
+        +change_salary(employee_id, amount)
+    }
+
+    class PetProfile {
+	    -name : str
+	    -id : str
+	    -species : Species
+        -weight : float
+        -sex : Sex
+        -bithdate : str
+        -medical_records : List
+    }
+
+    class Cage {
+        -cage_no : str
+        -cage_status : CageStatus
+        -cage_size : CageSize
+        -pet_id : str
+    }
+
+    class MedicalRecord {
+        -date : datetime
+	    -petprofile : PetProfile
+	    -user_id : str
+        -vet_id : str
+	    -symptoms : str
+        -diagnosis : str
+        -prescription : Prescription
+        -admitted_record : AdmittedRecord
+    }
+
+    class Prescription {
+        -medicine : Medicine
+        -instructions : str
+    }
+
+    class Appointment {
+        -appointment_id : str
+        -appointment_status : AppointmentStatus
+        -date : datetime
+        -vet: Vet
+        -user : User
+        -pet_profile : PetProfile
+        -invoice : Invoice
+        -Payment : Payment
+    }
+
+    class Invoice {
+        -invoice_no : str
+        -issued_date : datetime
+        -total : float
+        -payment_status : PaymentStatus
+    }
+
+    class PaymentMethod {
+        -method : string
+    }
+
+    class Payment {
+        -payment_id : str
+        -amount : float
+        -paid_date : datetime
+        -method : PaymentMethod
+        -receipt_list : List[ServiceItem]
+    }
+
+    class ServiceItem {
+        -service_id: ServiceType
+        -detail : str
+        -quantity : int
+        -unit_price : float
+    }
+
+    class PetHospital {
+	    -name : str
+        -user_list : List
+	    -employee_list : List
+	    -admitted_list : List
+        -medical_records_list : List
+	    -ward_list : List
+        -examination_room_list : List
+        -appointment_list : List
+        -cage_booking_list : List
+        +add_user()
+        +add_employee()
+        +search_pet_by_id(pet_id)
+        +search_employee_by_id(employee_id)
+        +search_user_by_id(user_id)
+        +look_up_appointments(user_id)
+        +look_up_cage_booking(user_id)
+        +request_appointment(user_id, vet_id, PetProfile, desired_date)
+        +create_new_appointment()
+        +book_cage(user_id, PetProfile, CageSize, stay_date, duration)
+    }
+
+    class CageBooking {
+        -booking_id : str
+        -booking_status : AppointmentStatus
+        -booking_date : datetime
+        -stay_date : datetime
+        -leave_date : datetime
+        -user : User
+        -pet_profile : PetProfile
+        -invoice : Invoice
+        -Payment : Payment
+    }
+
+    class Medicine {
+        -medicine_id : string
+        -name : str
+        -use_to_treat : List
+    }
+
+    class ExaminationRoom {
+        -room_no : str
+        -room_status : RoomStatus
+    }
+
+    class Ward {
+        -ward_no : str
+        -type : WardType
+        -cage_list : List
+        -max_number_of_cage : 10
+    }
+
+    class AdmittedRecord {
+        -pet_id : str
+        -ward_no : str
+        -cage_no : str
+        -date_of_admit : datetime
+        -date_of_leave : datetime
+        -total_admitted_time : int
+    }
+
+	<<Enumeration>> Species
+    <<Enumeration>> Sex
+    <<Enumeration>> WardType
+    <<Enumeration>> CageSize
+    <<Enumeration>> CageStatus
+    <<Enumeration>> RoomStatus
+
+    ServiceItem --o Payment
+    Payment <-- Appointment : settles
+    Prescription <-- Medicine
+    CageBooking --o PetHospital
+
+    Cage<--PetProfile
+    Vet o-- TimeSlot
+    Vet --> MedicalRecord : makes
+    Vet <-- Appointment
+    User --> Appointment : makes
+    User <-- Appointment
+    User <|-- Employee
+    Ward "1" o-- "1..10" Cage
+    User "1" o-- "1..*" PetProfile
+    Employee <|-- Vet
+    Employee <|-- HospitalStaff
+    Employee <|-- HospitalManager
+    MedicalRecord <-- Prescription
+    MedicalRecord <-- AdmittedRecord
+    MedicalRecord <-- PetProfile
+    PetProfile "1" o-- "0..*" MedicalRecord
+    PetHospital "1" o-- "0..*" MedicalRecord
+    PetHospital "1" o-- "1..*" Employee
+    PetHospital "1" o-- "1..*" Ward
+    PetHospital "1" o-- "0..*" AdmittedRecord
+    PetHospital "1" o-- "1..*" ExaminationRoom
+    PetHospital "1" o-- "0..*" Appointment
+    Appointment --> Invoice : generates
+    AdmittedRecord --> PetProfile
