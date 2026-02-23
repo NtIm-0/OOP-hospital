@@ -49,30 +49,28 @@ class PetHospital :
         self.__cage_booking_list = []
 
     def admit(self,MedicalRecordID,date_admit):
+        Pet = None
+        weight = None
+        medical = None
         for medical_record in self.__medical_record_list:
-            
             if(MedicalRecordID == medical_record.get_medical_id()):
-                pet = medical_record.get_approval()
-                if(isinstance(pet,PetProfile)):
-                    weight = pet.get_information()
-
-                    for ward in self.__ward_list:
-                        cage_list = ward.get_cage()
-
-                        for cage in cage_list:
-                            if(cage.can_admit(weight)):
-                                cage.update_status(pet)
-                                admit_record = AdmitRecord(pet.get_id(), ward, cage, date_admit)
-                                self.__admitted_list.append(admit_record)
-                                medical_record.write_admit_record(admit_record)
-                                return (f"admit success at cage {cage} in ward {ward}")
-                    
-                    else :
-                        return "No cage available"
-
-                else:
-                    return "Not approved"
+                Pet, weight = medical_record.get_approval()
+                medical = medical_record
+                break
+        if(isinstance(Pet,PetProfile)):
+            for ward in self.__ward_list:
+                cage_no, ward_no =  ward.try_admit(Pet, weight)
+                if(cage_no != None and ward_no != None):
+                    admit_record = AdmitRecord(Pet.get_id(), ward_no, cage_no, date_admit)
+                    medical_record.write_admit_record(admit_record)
+                    return f"admit success at cage {cage_no} ward {ward_no}"
     
+            else:
+                return f"no cage match available"
+            
+        elif(Pet == None): ## ไม่ได้มีการรีเทิร์น PetProfile = ไม่อนุมัติ 
+            return "Not approved"
+
 
     def make_medical_record(self, medical_id: str, date: str, pet: object, user: object, vet: object, symtomps: str, diagnosis: str,prescription: object, admit: bool):
         medical_rec = medical_record(medical_id,date,pet,user,vet,symtomps,diagnosis,prescription,admit)
@@ -99,7 +97,7 @@ class AdmitRecord():
         return self.__pet
     def get_cage(self):
         return self.__cage
-    
+
     def check_out(self, date_leave: str):
         self.__date_of_leave = date_leave
 "////////////////////////////////////////////////"
@@ -139,18 +137,17 @@ class medical_record :
         return self.__id
 
     def get_approval(self) -> Union[None,object]:
-        "return Pet if approved return None if not aprroved"
-        if(self.__admited_record):
-            return self.__pet
+        "return Pet and weight if approved return None if not aprroved"
+        if(self.__admited_record): 
+            return self.__pet, self.__pet.get_information()
         
-        return None
+        return None, None
 
     def write_admit_record(self,admit_record: object):
         self.__admited_record = admit_record
-        print(self.__admited_record, admit_record)
+        
 
     def get_admit_record(self):
-        print(self.__admited_record)
         return self.__admited_record
 
 "////////////////////////////////////////////////"
@@ -182,6 +179,15 @@ class Ward :
         self.__cage_list = []
         self.__max_number_of_cage = max_number_of_cage
 
+
+    def try_admit(self, Pet:object, weight: float):
+        for cage in self.__cage_list:
+            admit_cage = cage.can_admit(Pet, weight)
+            if(admit_cage != None):
+                return admit_cage, self.__ward_no
+
+        return None, None
+    
     def add_cage(self, cage: object):
         self.__cage_list.append(cage)
 
@@ -201,16 +207,19 @@ class Cage :
         self.__pet = pet
         self.__cage_status = cage_status
 
-    def can_admit(self, weight: float) -> bool:
+    def can_admit(self, Pet: object, weight: float) -> Union[str, None]:
         "ถ้ากรงว่างและน้ำหนักสัตว์ไม่เกิน return True"
         if(self.__cage_status == CageStatus.AVAILABLE and weight < self.__cage_size.value):
-            return True
-        return False
+            self.update_status(Pet)
+            return self.__cage_no 
+        
+        return None
     
     def update_status(self, Pet: object):
         "รับ pet มาและupdate pet และ status ของกรงเป็น occupied"
         self.__pet = Pet
         self.__cage_status = CageStatus.OCCUPIED
+
 
     @property
     def cage_status(self): return self.__cage_status
@@ -266,9 +275,13 @@ def create_test():
     # =============================
     # CASE 2 : NO CAGE AVAILABLE
     # =============================
+    pet2 = PetProfile(
+        "P002", "GeGee", "Dog", 4.0,
+        Sex.Male, "2020-01-01"
+    )
 
     hospital.make_medical_record( "M002", "2026-02-18",
-        pet1, user1, None,
+        pet2, user1, None,
         "Fever", "Infection",
         prescription,
         True
@@ -312,7 +325,9 @@ def get_admit_record(MedID):
     for med in hospital.get_med_list():
         if(med.get_medical_id() == MedID):
             if(isinstance(med.get_admit_record(),AdmitRecord)):
-                return {med.get_admit_record().get_pet() : med.get_admit_record().get_cage().no}
+                cage = med.get_admit_record().get_cage()
+                pet_id = med.get_admit_record().get_pet()
+                return {med.get_admit_record().get_pet() : cage}
             return {MedID : med.get_admit_record()}
     return {MedID : "can't find this ID"}
 
