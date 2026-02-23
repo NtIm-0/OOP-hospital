@@ -1,0 +1,135 @@
+ver0
+---------------------------------------------------------------------------------------------------------------------------------
+sequenceDiagram
+    actor HospitalStaff
+    HospitalStaff ->> PetHospital : admit(medical_recordID, date_admit)
+    loop for medical in medical record_list
+    PetHospital ->> medical_record : get_medical_id()
+    medical_record -->> PetHospital : return medical_id
+    end
+    alt if matched
+    PetHospital ->> medical_record : get_admit_approval()
+    medical_record -->> PetHospital : return Pet if approved return None not approved
+    end
+    alt if approved
+    PetHospital ->> Pet : get_information()
+    Pet -->> PetHospital : return pet get_information
+    loop for room in room_list
+    PetHospital ->> room : get_cage()
+    room -->> PetHospital : return all cage in room
+    loop for cage in cage_list
+    PetHospital ->> cage : can_admit(pet_information)
+    cage -->> PetHospital : return bool if can return True
+    alt if True
+    PetHospital ->> cage : update_status(Pet)
+    PetHospital -->> HospitalStaff : return admit success at cage and room
+    end ##alt True
+
+    end ##loop cage_list
+
+    end ##loop room_list
+    PetHospital -->> HospitalStaff :return No cage available
+    else not approved
+    PetHospital -->> HospitalStaff : return Not approved
+    end ##alt if approved
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+ver1
+---------------------------------------------------------------------------------------------------------------------------------
+
+sequenceDiagram
+    actor HospitalStaff
+    HospitalStaff ->> PetHospital : admit(medical_recordID)
+    activate PetHospital
+    loop for medical in medical record_list
+    PetHospital ->> medical_record : get_medical_id()
+    medical_record -->> PetHospital : return medical_id
+    alt if matched
+    PetHospital ->> medical_record : get_admit_approval()
+    activate medical_record
+    medical_record ->> Pet : get_weight()
+    activate Pet
+    alt if approved
+    Pet -->> medical_record : return get_weight
+    else 
+    Pet -->> medical_record : return None
+    end
+    deactivate Pet
+    medical_record -->> PetHospital : return Pet and weight if approved return None and None if not
+    end
+    deactivate medical_record
+    end
+    deactivate PetHospital
+    alt if approved
+    
+    loop for room in room_list
+    PetHospital ->> room : get_cage()
+    room -->> PetHospital : return all cage in room
+    loop for cage in cage_list
+    PetHospital ->> cage : can_admit(pet_information)
+    cage -->> PetHospital : return bool if can return True
+    alt if True
+    PetHospital ->> cage : update_status(Pet)
+    PetHospital -->> HospitalStaff : return admit success at cage and room
+    end ##alt True
+
+    end ##loop cage_list
+
+    end ##loop room_list
+    PetHospital -->> HospitalStaff :return No cage available
+    else not approved
+    PetHospital -->> HospitalStaff : return Not approved
+    end ##alt if approved
+
+---------------------------------------------------------------------------------------------------------------------------------
+ver 03
+---------------------------------------------------------------------------------------------------------------------------------
+
+sequenceDiagram
+    actor HospitalStaff
+    HospitalStaff ->> PetHospital : admit(medical_recordID)
+    activate PetHospital
+    loop for medical in medical record_list
+    PetHospital ->> medical_record : get_medical_id()
+    medical_record -->> PetHospital : return medical_id
+    alt if matched
+    PetHospital ->> medical_record : get_admit_approval()
+    activate medical_record
+    medical_record ->> Pet : get_weight()
+    activate Pet
+    alt if approved
+    Pet -->> medical_record : return get_weight
+    else 
+    Pet -->> medical_record : return None
+    end
+    deactivate Pet
+    medical_record -->> PetHospital : return Pet and weight if approved return None and None if not
+    end
+    deactivate medical_record
+    end
+    deactivate PetHospital
+    alt if approved
+    
+    loop for room in room_list
+    PetHospital ->> room : try_admit(Pet, weight)
+
+    loop for cage in cage_list
+    room ->> cage : can_admit(pet_information, Pet)
+    alt if can_admit
+    cage ->> cage : update_status(Pet)
+    cage -->> room : return cage 
+    room -->> PetHospital : return room and cage
+    PetHospital -->> HospitalStaff : return admit success at cage and room
+    end ##alt True
+
+    end ##loop cage_list
+
+    end ##loop room_list
+    PetHospital -->> HospitalStaff :return No cage available
+    else not approved
+    PetHospital -->> HospitalStaff : return Not approved
+    end ##alt if approved
+
+
+---------------------------------------------------------------------------------------------------------------------------------
