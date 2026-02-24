@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from enum import Enum
+from datetime import datetime
 import uvicorn
 from typing import Union
 "////////////////////////////////////////////////"
@@ -52,6 +53,7 @@ class PetHospital :
         Pet = None
         weight = None
         medical = None
+        date_admit = self.valid_date(date_admit)
         for medical_record in self.__medical_record_list:
             if(MedicalRecordID == medical_record.get_medical_id()):
                 Pet, weight = medical_record.get_approval()
@@ -61,6 +63,7 @@ class PetHospital :
             for ward in self.__ward_list:
                 cage_no, ward_no =  ward.try_admit(Pet, weight)
                 if(cage_no != None and ward_no != None):
+                    
                     admit_record = AdmitRecord(Pet.get_id(), ward_no, cage_no, date_admit)
                     medical_record.write_admit_record(admit_record)
                     return f"admit success at cage {cage_no} ward {ward_no}"
@@ -71,6 +74,12 @@ class PetHospital :
         elif(Pet == None): ## ไม่ได้มีการรีเทิร์น PetProfile = ไม่อนุมัติ 
             return "Not approved"
 
+    def valid_date(self, date_time):
+        try:
+            date_time = datetime.strptime(date_time, "%d/%m/%Y %H:%M")
+            return date_time
+        except :
+            raise HTTPException(status_code= 400, detail= "validate datetime format. dd/mm/yy hr:min")
 
     def make_medical_record(self, medical_id: str, date: str, pet: object, user: object, vet: object, symtomps: str, diagnosis: str,prescription: object, admit: bool):
         medical_rec = medical_record(medical_id,date,pet,user,vet,symtomps,diagnosis,prescription,admit)
